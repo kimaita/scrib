@@ -11,13 +11,19 @@ export async function load({ fetch }) {
     if (!videosRes.ok || !playlistsRes.ok)
       throw new Error("Failed to fetch data");
 
-    const sermons = await videosRes.json();
+    const sermon_resp = await videosRes.json();
+
+    const sermons = sermon_resp.data.map((sermon) => {
+      return {
+        ...sermon,
+        downloadlink: `${PUBLIC_API_BASE_URL}/videos/${sermon.id}/download`,
+      };
+    });
+
     const series = await playlistsRes.json();
-    // sermons.data.map((sermon)=>{
-    //     sermon.
-    // });
+
     return {
-      recentSermons: sermons.data,
+      recentSermons: sermons,
       playlists: series.data,
     };
   } catch {

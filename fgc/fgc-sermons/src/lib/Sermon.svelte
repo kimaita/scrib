@@ -1,18 +1,9 @@
 <script>
-  import { PUBLIC_API_BASE_URL } from "$env/static/public";
   import DownloadOutline from "flowbite-svelte-icons/DownloadOutline.svelte";
   import { error } from "@sveltejs/kit";
 
   let s = $props();
   const sermon = s.sermon;
-
-  async function downloadFile() {
-    const resp = await fetch(
-      `${PUBLIC_API_BASE_URL}/videos/${sermon.id}/download`
-    );
-
-    return resp.body;
-  }
 </script>
 
 <li>
@@ -38,7 +29,7 @@
     </div>
     {#if sermon?.state?.toLowerCase() === "ready"}
       <div class="">
-        <a href={`${PUBLIC_API_BASE_URL}/videos/${sermon.id}/download`}>
+        <a href={sermon.downloadlink}>
           <DownloadOutline class="size-6 hover:shadow" />
         </a>
         <!-- <ShareNodesOutline class="size-6" /> -->
