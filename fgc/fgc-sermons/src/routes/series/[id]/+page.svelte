@@ -1,6 +1,5 @@
 <script>
   import Sermon from "$lib/Sermon.svelte";
-  import { Avatar, Li, List } from "flowbite-svelte";
   import { formatDateString } from "$lib/format.js";
   import Youtube from "$lib/icons/youtube.svg";
   let { data } = $props();
