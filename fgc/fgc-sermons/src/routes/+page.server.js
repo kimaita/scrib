@@ -1,11 +1,11 @@
-import { PUBLIC_API_BASE_URL } from "$env/static/public";
+import { API_BASE_URL } from "$env/static/private";
 // import { error } from "@sveltejs/kit";
 
 export async function load({ fetch }) {
   try {
     const [videosRes, playlistsRes] = await Promise.all([
-      fetch(`${PUBLIC_API_BASE_URL}/videos?pageSize=2`),
-      fetch(`${PUBLIC_API_BASE_URL}/playlists?pageSize=6`),
+      fetch(`${API_BASE_URL}/videos?pageSize=2`),
+      fetch(`${API_BASE_URL}/playlists?pageSize=6`),
     ]);
 
     if (!videosRes.ok || !playlistsRes.ok)
@@ -16,7 +16,7 @@ export async function load({ fetch }) {
     const sermons = sermon_resp.data.map((sermon) => {
       return {
         ...sermon,
-        downloadlink: `${PUBLIC_API_BASE_URL}/videos/${sermon.id}/download`,
+        downloadlink: `${API_BASE_URL}/videos/${sermon.id}/download`,
       };
     });
 

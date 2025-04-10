@@ -1,14 +1,14 @@
 import { error } from "@sveltejs/kit";
-import { PUBLIC_API_BASE_URL } from "$env/static/public";
+import { API_BASE_URL } from "$env/static/private";
 
 export async function load({ params, fetch }) {
   try {
-    const res = await fetch(`${PUBLIC_API_BASE_URL}/playlists/${params.id}`);
+    const res = await fetch(`${API_BASE_URL}/playlists/${params.id}`);
     if (!res.ok) throw new Error("Playlist not found");
 
     const series = await res.json();
     series.videos.forEach((sermon) => {
-      sermon.downloadlink = `${PUBLIC_API_BASE_URL}/videos/${sermon.id}/download`;
+      sermon.downloadlink = `${API_BASE_URL}/videos/${sermon.id}/download`;
     });
 
     return {
