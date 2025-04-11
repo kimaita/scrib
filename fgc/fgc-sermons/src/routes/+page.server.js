@@ -4,7 +4,7 @@ import { API_BASE_URL } from "$env/static/private";
 export async function load({ fetch }) {
   try {
     const [videosRes, playlistsRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/videos?pageSize=2`),
+      fetch(`${API_BASE_URL}/videos?state=READY&pageSize=2`),
       fetch(`${API_BASE_URL}/playlists?pageSize=6`),
     ]);
 
