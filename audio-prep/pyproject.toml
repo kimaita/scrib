@@ -1,0 +1,22 @@
+[project]
+name = "cloud-run"
+version = "0.1.0"
+description = "Cloud run deployment"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.11.13",
+    "boto3>=1.37.12",
+    "fastapi[standard]>=0.115.8",
+    "ffmpeg-python>=0.2.0",
+    "google-genai>=1.11.0",
+    "pillow>=11.1.0",
+    "python-dotenv>=1.0.1",
+    "requests>=2.32.3",
+    "yt-dlp>=2025.2.19",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ipykernel>=6.29.5",
+]
