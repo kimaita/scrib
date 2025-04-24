@@ -155,7 +155,7 @@ def create_ffmpeg_cmd(input=None, output=None, **kwargs):
     return ffmpeg_cmd
 
 
-def prepare_audio(video_id, start, end, metadata={}) -> str:
+def prepare_audio(video_id, start, end, metadata) -> str:
     """"""
 
     filename = f"{video_id}.mp3"
@@ -206,7 +206,7 @@ def prepare_audio(video_id, start, end, metadata={}) -> str:
     return filename
 
 
-def prepare_episode(video_id: str, start, end):
+def prepare_episode(video_id: str, start, end, metadata=None):
     """"""
 
     info = get_video_info(video_id)
@@ -214,7 +214,7 @@ def prepare_episode(video_id: str, start, end):
     thumbnails = info.get("thumbnails")
     thumbnail = thumbnails.get("maxres") or thumbnails.get("standard")
     artwork = prepare_artwork(thumbnail.get("url"), video_id)
-    audio = prepare_audio(video_id, start, end)
+    audio = prepare_audio(video_id, start, end, metadata or {})
     summary = generate_summary(audio)
     expected_duration = convert_timestring(end) - convert_timestring(start)
 
