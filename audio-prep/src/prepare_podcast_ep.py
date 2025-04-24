@@ -215,7 +215,6 @@ def prepare_episode(video_id: str, start, end, metadata=None):
     thumbnail = thumbnails.get("maxres") or thumbnails.get("standard")
     artwork = prepare_artwork(thumbnail.get("url"), video_id)
     audio = prepare_audio(video_id, start, end, metadata or {})
-    summary = generate_summary(audio)
     expected_duration = convert_timestring(end) - convert_timestring(start)
 
     if not artwork:
@@ -230,6 +229,7 @@ def prepare_episode(video_id: str, start, end, metadata=None):
         )
         return False
 
+    summary = generate_summary(audio)
     upload_file(artwork, f"processed/{video_id}/{artwork}")
     upload_file(audio, f"processed/{video_id}/{audio}")
     update_video(
