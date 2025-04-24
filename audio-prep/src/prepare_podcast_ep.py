@@ -161,8 +161,8 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     filename = f"{video_id}.mp3"
     thumbnail = f"{video_id}.podcast.jpg"
 
-    download_err = open("download.err.txt", "a")
-    ffmpeg_err = open("ffmpeg.err.txt", "a")
+    download_err = open("download.err.txt", "a+")
+    ffmpeg_err = open("ffmpeg.err.txt", "a+")
 
     info = get_video_info(video_id)
     metadata.update(
@@ -200,7 +200,14 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     _, err = audio_process.communicate()
 
     if err or audio_process.returncode:
-        logging.error(f"Error processing: {err}")
+        ffmpeg_error = ffmpeg_err.read()
+        download_error = download_err.read()
+
+        logging.error(
+            f"Error processing: err:{err} Download error: {download_error} or ffmpeg error: {ffmpeg_error}"
+        )
+        ffmpeg_err.close()
+        download_err.close()
         return False
 
     return filename
