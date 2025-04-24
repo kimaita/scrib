@@ -161,8 +161,8 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     filename = f"{video_id}.mp3"
     thumbnail = f"{video_id}.podcast.jpg"
 
-    download_err = open("download.err.txt", "a+")
-    ffmpeg_err = open("ffmpeg.err.txt", "a+")
+    download_err = open("download.err.txt", "w+")
+    ffmpeg_err = open("ffmpeg.err.txt", "w+")
 
     info = get_video_info(video_id)
     metadata.update(
@@ -210,6 +210,7 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         download_err.close()
         return False
 
+    logging.info("Audio processed", filename)
     return filename
 
 
@@ -220,9 +221,9 @@ def prepare_episode(video_id: str, start, end, metadata=None):
 
     thumbnails = info.get("thumbnails")
     thumbnail = thumbnails.get("maxres") or thumbnails.get("standard")
+    expected_duration = convert_timestring(end) - convert_timestring(start)
     artwork = prepare_artwork(thumbnail.get("url"), video_id)
     audio = prepare_audio(video_id, start, end, metadata or {})
-    expected_duration = convert_timestring(end) - convert_timestring(start)
 
     if not artwork:
         logging.error("Error processing artwork")
@@ -245,6 +246,8 @@ def prepare_episode(video_id: str, start, end, metadata=None):
         state="READY",
         description=summary,
     )
+
+    logging.info("Episode prepared", video_id)
 
     return True
 
