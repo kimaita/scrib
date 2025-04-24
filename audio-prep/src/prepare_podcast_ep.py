@@ -185,7 +185,7 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     ytdlp_cmd = create_ytdlp_cmd(video_id)
     ffmpeg_cmd = create_ffmpeg_cmd(output=filename, **ffmpeg_args)
 
-    print("Processing audio...", filename)
+    logging.info("Processing audio...", filename)
     download = subprocess.Popen(
         ytdlp_cmd,
         stdout=subprocess.PIPE,
@@ -200,7 +200,7 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     _, err = audio_process.communicate()
 
     if err or audio_process.returncode:
-        print(f"Error processing: {err}")
+        logging.error(f"Error processing: {err}")
         return False
 
     return filename
@@ -218,11 +218,11 @@ def prepare_episode(video_id: str, start, end, metadata=None):
     expected_duration = convert_timestring(end) - convert_timestring(start)
 
     if not artwork:
-        print("Error processing artwork")
+        logging.error("Error processing artwork")
         return False
 
     if not (audio and check_length(audio, expected_duration)):
-        print("Error processing audio file")
+        logging.error("Error processing audio file")
         update_video(
             video_id,
             state="FAILED",
