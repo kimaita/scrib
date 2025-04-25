@@ -18,16 +18,15 @@ FROM jrottenberg/ffmpeg AS ffmpeg
 # Final image
 FROM python:3.12-slim-bookworm
 
-COPY --from=builder --chown=app:app /app /app
-
 # Copy ffmpeg
 ENV LD_LIBRARY_PATH=/usr/local/lib
 COPY --from=ffmpeg /usr/local /usr/local/
 COPY --from=ffmpeg /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
 COPY --from=ffmpeg /lib/x86_64-linux-gnu/* /usr/lib/
 
+COPY --from=builder --chown=app:app /app /app
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["fastapi", "dev", "--host", "0.0.0.0", "/app/main.py"]
+CMD ["fastapi", "run", "/app/main.py"]
