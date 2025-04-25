@@ -16,12 +16,21 @@ from .youtube_api import YouTube
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s:%(asctime)s:%(message)s",
+    encoding="utf-8",
+    level=logging.INFO,
+)
+
 
 def generate_summary(file_path) -> str:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     audio_file = client.files.upload(file=file_path)
     with open("sermon_summary_prompt.txt") as f:
         PROMPT = f.read()
+    logging.info(f"Generating summary: {file_path}")
+
     response = client.models.generate_content(
         model="gemini-2.0-flash", contents=[PROMPT, audio_file]
     )
@@ -45,6 +54,7 @@ def get_pad_color(img):
 
 
 def resize(img):
+    """"""
     size = (1400, 1400)
 
     asp_ratio = img.width / img.height
@@ -67,13 +77,14 @@ def prepare_artwork(thumbnail_url, id):
     filename = f"{id}.podcast.jpg"
     res = requests.get(thumbnail_url)
     thumbnail = Image.open(BytesIO(res.content))
+    logging.info(f"Resizing image {filename}")
 
     try:
         artwork = resize(thumbnail)
         artwork.save(filename)
         return filename
     except Exception as e:
-        logging.error(e)
+        logging.error(f"Error processing thumhnail {e}")
         return False
 
 
@@ -93,29 +104,46 @@ def convert_timestring(timestring):
     return tdelta.total_seconds()
 
 
-def check_length(file_name, expected):
+def actual_length(file_name):
     """"""
     cmd = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1"
-    ERROR_MARGIN = 2
-
     check = subprocess.run(shlex.split(cmd) + [file_name], capture_output=True)
-    actual = float(check.stdout.decode().strip())
+    try:
+        actual = float(check.stdout.decode().strip())
+        return actual
+    except ValueError:
+        logging.error(f"Error getting length of {file_name}: {check.stderr.decode()}")
+        return 0
+
+
+def check_length(file_name, expected):
+    """"""
+
+    actual = actual_length(file_name)
+    ERROR_MARGIN = 2
+    logging.debug(
+        f"Audio length: {actual} expected: {expected} diff: {abs(actual - expected)}"
+    )
 
     return expected - ERROR_MARGIN <= actual <= expected + ERROR_MARGIN
 
 
-def create_ytdlp_cmd(video_id, output=None):
+def create_ytdlp_cmd(video_id, output=False):
     """"""
-    return [
+    cmd = [
         "yt-dlp",
         "-f",
         "ba",
         video_id,
         "--quiet",
         "--no-warnings",
-        "--output",
-        output or "-",
     ]
+    if output:
+        cmd.extend(["--print", "filename", "-o", "%(id)s.%(ext)s"])
+    else:
+        cmd.extend(["-o", "-"])
+
+    return cmd
 
 
 def create_ffmpeg_cmd(input=None, output=None, **kwargs):
@@ -161,9 +189,6 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     filename = f"{video_id}.mp3"
     thumbnail = f"{video_id}.podcast.jpg"
 
-    download_err = open("download.err.txt", "w+")
-    ffmpeg_err = open("ffmpeg.err.txt", "w+")
-
     info = get_video_info(video_id)
     metadata.update(
         {
@@ -182,32 +207,38 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         "metadata": metadata,
     }
 
-    ytdlp_cmd = create_ytdlp_cmd(video_id)
-    ffmpeg_cmd = create_ffmpeg_cmd(output=filename, **ffmpeg_args)
+    ytdlp_cmd = create_ytdlp_cmd(video_id, output=True)
 
-    logging.info("Processing audio...", filename)
+    logging.info(f"Downloading audio {video_id}: {ytdlp_cmd} ")
     download = subprocess.Popen(
         ytdlp_cmd,
         stdout=subprocess.PIPE,
-        stderr=download_err,
+        stderr=subprocess.PIPE,
         bufsize=1_000_000,
     )
+    downloaded, download_err = download.communicate()
+    download_code = download.wait()
+    logging.info(f"Downloaded audio {video_id}: {downloaded.decode()}")
+
+    if download_code:
+        logging.error(f"Error downloading: {download_err.decode()}")
+        return False
+
+    ffmpeg_cmd = create_ffmpeg_cmd(
+        input=downloaded.decode(), output=filename, **ffmpeg_args
+    )
+    logging.info(f"Processing audio {filename}: {ffmpeg_cmd} ")
     audio_process = subprocess.Popen(
         ffmpeg_cmd,
-        stdin=download.stdout,
-        stderr=ffmpeg_err,
+        # stdin=download.stdout,
+        stderr=subprocess.PIPE,
     )
-    _, err = audio_process.communicate()
+    _, processing_err = audio_process.communicate()
 
-    if err or audio_process.returncode:
-        ffmpeg_error = ffmpeg_err.read()
-        download_error = download_err.read()
+    audio_process.wait()
 
-        logging.error(
-            f"Error processing: err:{err} Download error: {download_error} or ffmpeg error: {ffmpeg_error}"
-        )
-        ffmpeg_err.close()
-        download_err.close()
+    if audio_process.returncode:
+        logging.error(f"Error processing: {processing_err.decode()}")
         return False
 
     logging.info("Audio processed", filename)
@@ -229,13 +260,23 @@ def prepare_episode(video_id: str, start, end, metadata=None):
         logging.error("Error processing artwork")
         return False
 
-    if not (audio and check_length(audio, expected_duration)):
+    if not audio:
         logging.error("Error processing audio file")
         update_video(
             video_id,
             state="FAILED",
         )
-        return False
+        return
+
+    if not check_length(audio, expected_duration):
+        logging.error(
+            f"Audio length mismatch: {audio} expected: {expected_duration} got: {actual_length(audio)}"
+        )
+        update_video(
+            video_id,
+            state="FAILED",
+        )
+        return
 
     summary = generate_summary(audio)
     upload_file(artwork, f"processed/{video_id}/{artwork}")
@@ -247,7 +288,7 @@ def prepare_episode(video_id: str, start, end, metadata=None):
         description=summary,
     )
 
-    logging.info("Episode prepared", video_id)
+    logging.info(f"Episode prepared: {video_id}")
 
     return True
 
