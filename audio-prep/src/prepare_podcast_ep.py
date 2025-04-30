@@ -4,7 +4,6 @@ import shlex
 import subprocess
 from datetime import timedelta
 from io import BytesIO
-
 import boto3
 import requests
 from botocore.exceptions import ClientError
@@ -13,11 +12,13 @@ from google import genai
 from PIL import Image, ImageOps
 
 from .youtube_api import YouTube
+from .download import download_audio
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
+    filename="scrib-run.log",
     format="%(levelname)s:%(asctime)s:%(message)s",
     encoding="utf-8",
     level=logging.INFO,
@@ -27,7 +28,7 @@ logging.basicConfig(
 def generate_summary(file_path) -> str:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     audio_file = client.files.upload(file=file_path)
-    with open("sermon_summary_prompt.txt") as f:
+    with open(os.path.expanduser("~/server/src/sermon_summary_prompt.txt")) as f:
         PROMPT = f.read()
     logging.info(f"Generating summary: {file_path}")
 
@@ -38,7 +39,7 @@ def generate_summary(file_path) -> str:
 
 
 def get_video_info(video_id):
-    """"""
+    """Fetch video details from the Youtube API"""
     res = YouTube().get("video", video_id)
     try:
         return res[0]
@@ -54,7 +55,7 @@ def get_pad_color(img):
 
 
 def resize(img):
-    """"""
+    """Resize image to suitable artwork size"""
     size = (1400, 1400)
 
     asp_ratio = img.width / img.height
@@ -89,7 +90,7 @@ def prepare_artwork(thumbnail_url, id):
 
 
 def convert_timestring(timestring):
-    """"""
+    """Convert a string timestamp to seconds"""
     parts = timestring.split(":")
     if len(parts) > 3:
         raise ValueError("Invalid time")
@@ -105,7 +106,7 @@ def convert_timestring(timestring):
 
 
 def actual_length(file_name):
-    """"""
+    """Get audio/video file length"""
     cmd = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1"
     check = subprocess.run(shlex.split(cmd) + [file_name], capture_output=True)
     try:
@@ -117,7 +118,7 @@ def actual_length(file_name):
 
 
 def check_length(file_name, expected):
-    """"""
+    """Check whether the sermon's lenth is within accepted range"""
 
     actual = actual_length(file_name)
     ERROR_MARGIN = 2
@@ -126,24 +127,6 @@ def check_length(file_name, expected):
     )
 
     return expected - ERROR_MARGIN <= actual <= expected + ERROR_MARGIN
-
-
-def create_ytdlp_cmd(video_id, output=False):
-    """"""
-    cmd = [
-        "yt-dlp",
-        "-f",
-        "ba",
-        video_id,
-        "--quiet",
-        "--no-warnings",
-    ]
-    if output:
-        cmd.extend(["--print", "filename", "-o", "%(id)s.%(ext)s"])
-    else:
-        cmd.extend(["-o", "-"])
-
-    return cmd
 
 
 def create_ffmpeg_cmd(input=None, output=None, **kwargs):
@@ -184,7 +167,7 @@ def create_ffmpeg_cmd(input=None, output=None, **kwargs):
 
 
 def prepare_audio(video_id, start, end, metadata) -> str:
-    """"""
+    """Process a sermon audio recording"""
 
     filename = f"{video_id}.mp3"
     thumbnail = f"{video_id}.podcast.jpg"
@@ -192,9 +175,6 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     info = get_video_info(video_id)
     metadata.update(
         {
-            # "album",
-            # "title": info.get("title"),
-            # "artist",
             "publisher": info.get("channel"),
             "date": info.get("publish_date"),
             "language": info.get("language") or "en",
@@ -207,30 +187,23 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         "metadata": metadata,
     }
 
-    ytdlp_cmd = create_ytdlp_cmd(video_id, output=True)
-
-    logging.info(f"Downloading audio {video_id}: {ytdlp_cmd} ")
-    download = subprocess.Popen(
-        ytdlp_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=1_000_000,
-    )
-    downloaded, download_err = download.communicate()
-    download_code = download.wait()
-    logging.info(f"Downloaded audio {video_id}: {downloaded.decode()}")
-
-    if download_code:
-        logging.error(f"Error downloading: {download_err.decode()}")
+    logging.info(f"Downloading audio {video_id}")
+    downloaded = download_audio(video_id)
+    # download_req  = requests.post(os.getenv('PROCESSING_URL'), json={"video_id": video_id})
+    # if download_req.status_code != 200:
+    #     logging.error(f"Error downloading {video_id}: {download_req.json()}")
+    #     return False
+    # downloaded = download_req.json().get('path')
+    if not downloaded:
+        logging.error(f"Error downloading {video_id}")
         return False
 
-    ffmpeg_cmd = create_ffmpeg_cmd(
-        input=downloaded.decode(), output=filename, **ffmpeg_args
-    )
+    logging.info(f"Downloaded audio {video_id}: {downloaded}")
+
+    ffmpeg_cmd = create_ffmpeg_cmd(input=downloaded, output=filename, **ffmpeg_args)
     logging.info(f"Processing audio {filename}: {ffmpeg_cmd} ")
     audio_process = subprocess.Popen(
         ffmpeg_cmd,
-        # stdin=download.stdout,
         stderr=subprocess.PIPE,
     )
     _, processing_err = audio_process.communicate()
@@ -241,54 +214,50 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         logging.error(f"Error processing: {processing_err.decode()}")
         return False
 
-    logging.info("Audio processed", filename)
+    logging.info(f"Audio processed {filename}")
     return filename
 
 
-def prepare_episode(video_id: str, start, end, metadata=None):
-    """"""
+def prepare_episode(video):
+    """Prepares sermon for hosting"""
 
-    info = get_video_info(video_id)
+    info = get_video_info(video.id)
 
     thumbnails = info.get("thumbnails")
     thumbnail = thumbnails.get("maxres") or thumbnails.get("standard")
-    expected_duration = convert_timestring(end) - convert_timestring(start)
-    artwork = prepare_artwork(thumbnail.get("url"), video_id)
-    audio = prepare_audio(video_id, start, end, metadata or {})
+    expected_duration = convert_timestring(video.end) - convert_timestring(video.start)
+    artwork = prepare_artwork(thumbnail.get("url"), video.id)
 
     if not artwork:
         logging.error("Error processing artwork")
-        return False
+        return
+    upload_file(artwork, f"processed/{video.id}/{artwork}")
 
+    audio = prepare_audio(video.id, video.start, video.end, video.metadata or {})
     if not audio:
         logging.error("Error processing audio file")
-        update_video(
-            video_id,
-            state="FAILED",
-        )
+        update_video(video.id, state="FAILED")
         return
 
+    audio_length = actual_length(audio)
     if not check_length(audio, expected_duration):
         logging.error(
-            f"Audio length mismatch: {audio} expected: {expected_duration} got: {actual_length(audio)}"
+            f"Audio length mismatch: {audio} expected: {expected_duration} got: {audio_length}"
         )
-        update_video(
-            video_id,
-            state="FAILED",
-        )
+        update_video(video.id, state="FAILED")
         return
 
     summary = generate_summary(audio)
-    upload_file(artwork, f"processed/{video_id}/{artwork}")
-    upload_file(audio, f"processed/{video_id}/{audio}")
-    update_video(
-        video_id,
-        duration=expected_duration,
+    upload_file(audio, f"processed/{video.id}/{audio}")
+
+    update_req = update_video(
+        video.id,
+        duration=int(audio_length),
         state="READY",
         description=summary,
     )
 
-    logging.info(f"Episode prepared: {video_id}")
+    logging.info(f"Episode prepared: {video.id} - {update_req}")
 
     return True
 
@@ -325,7 +294,7 @@ def upload_file(file_name, object_name=None):
 
 
 def update_video(video_id, **kwargs):
-    """"""
+    """Update video attributes"""
     API_ENDPOINT = "https://scrib-api.childrick.workers.dev/videos"
 
     r = requests.patch(f"{API_ENDPOINT}/{video_id}", json=kwargs)
@@ -333,3 +302,5 @@ def update_video(video_id, **kwargs):
     if r.status_code != 200:
         logging.error(f"Error updating video {video_id}: {resp}")
         return False
+
+    return resp
