@@ -28,7 +28,7 @@
     "vars": {
         "API_BASE_URL": "https://scrib-api.childrick.workers.dev",
         "PROCESSING_API_URL": "http://34.79.10.29:8000"
-    },
+    }
     /**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
