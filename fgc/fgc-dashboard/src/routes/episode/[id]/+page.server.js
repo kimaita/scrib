@@ -27,9 +27,9 @@ export const actions = {
     const processing = await fetch(`${PROCESSING_API_URL}/episode`, {
       method: "POST",
       body: JSON.stringify({
-        video_id: update_data.video_id,
-        start_time: update_data.start,
-        end_time: update_data.end,
+        id: update_data.video_id,
+        start: update_data.start,
+        end: update_data.end,
         metadata: {
           title: update_data.title,
           artist: update_data.speaker,
