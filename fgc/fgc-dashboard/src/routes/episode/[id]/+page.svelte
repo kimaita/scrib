@@ -6,9 +6,9 @@
   $inspect(vid);
 </script>
 
-<div class="mx-auto px-4 py-16 sm:max-w-xl">
+<div class="px-4 sm:px-8 grid gap-4 items-center md:grid-cols-2 grid-cols-1">
   <iframe
-    class="mb-3 h-56 w-full rounded-lg sm:h-72"
+    class="w-full h-64 sm:h-96 rounded-lg"
     src={`https://www.youtube.com/embed/${vid.id}`}
     title={vid.title}
     frameborder="0"
@@ -16,7 +16,7 @@
     referrerpolicy="strict-origin-when-cross-origin"
   ></iframe>
 
-  <form method="POST">
+  <form class="mx-auto max-w-lg" method="POST">
     <input type="hidden" name="video_id" value={vid.id} />
     <div class="flex flex-col items-center">
       <div class="grid w-full gap-3 sm:grid-cols-2">
@@ -99,7 +99,7 @@
 {:else if form?.message}
   <div class="toast">
     <div class="alert alert-info">
-      <span>form.message</span>
+      <span>{form.message}</span>
     </div>
   </div>
 {/if}

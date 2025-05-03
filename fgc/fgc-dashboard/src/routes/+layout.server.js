@@ -4,7 +4,6 @@ import { API_BASE_URL } from "$env/static/private";
 export async function load({ fetch }) {
   try {
     const videosRes = await fetch(`${API_BASE_URL}/videos?pageSize=25`);
-    console.log("videosRes", videosRes);
     if (!videosRes.ok) {
       console.error("Error fetching videos:", videosRes.statusText);
       //   return {};

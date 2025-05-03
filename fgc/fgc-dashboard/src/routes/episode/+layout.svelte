@@ -1,17 +1,19 @@
 <script>
+  import { goto } from "$app/navigation";
+
   /** @type {import('./$types').LayoutProps} */
   let { data, children } = $props();
 </script>
 
-<div class="mb-6 mt-4">
+<div class="mb-6 mt-4 ms-4">
   <a
     href="/"
     class="inline-flex items-center text-blue-600 hover:text-blue-800"
-    onclick={() => history.back()}
+    onclick={goto("/")}
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      class="h-8 w-8 mr-1"
+      class="h-8 w-8"
       viewBox="0 0 20 20"
       fill="currentColor"
     >
@@ -21,7 +23,6 @@
         clip-rule="evenodd"
       />
     </svg>
-    Back to Videos
   </a>
 </div>
 {@render children()}
