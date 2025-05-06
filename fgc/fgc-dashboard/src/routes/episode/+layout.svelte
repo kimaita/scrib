@@ -6,11 +6,7 @@
 </script>
 
 <div class="mb-6 mt-4 ms-4">
-  <a
-    href="/"
-    class="inline-flex items-center text-blue-600 hover:text-blue-800"
-    onclick={goto("/")}
-  >
+  <a href="/" class="inline-flex hover:text-accent/30" onclick={goto("/")}>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       class="h-8 w-8"

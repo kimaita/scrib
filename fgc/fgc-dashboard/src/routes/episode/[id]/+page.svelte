@@ -1,9 +1,11 @@
 <script>
   import { page } from "$app/state";
-  let { data, form } = $props();
+  import { enhance } from "$app/forms";
+  import { videos } from "$lib/stores/videoStore.js";
 
+  let { data, form } = $props();
   let vid = data.sermons.find((v) => v.id === page.params.id) || {};
-  $inspect(vid);
+  let isSubmitting = $state(false);
 </script>
 
 <div class="px-4 sm:px-8 grid gap-4 items-center md:grid-cols-2 grid-cols-1">
@@ -16,7 +18,25 @@
     referrerpolicy="strict-origin-when-cross-origin"
   ></iframe>
 
-  <form class="mx-auto max-w-lg" method="POST">
+  <form
+    class="mx-auto max-w-lg"
+    method="POST"
+    use:enhance={() => {
+      isSubmitting = true;
+      // This runs *before* the form submits
+      return async ({ result, update }) => {
+        // This runs *after* the action completes on the server
+        isSubmitting = false;
+
+        // result contains the data returned from the form action
+        // update() function handles default navigation/updates based on result
+        // If the action returns a redirect, enhance handles it automatically.
+        // If the action returns { status: 'success' }, form store is updated.
+        // No need for manual navigation here if action redirects.
+        await update();
+      };
+    }}
+  >
     <input type="hidden" name="video_id" value={vid.id} />
     <div class="flex flex-col items-center">
       <div class="grid w-full gap-3 sm:grid-cols-2">
@@ -29,6 +49,7 @@
             name="title"
             value={vid.title}
             required
+            disabled={isSubmitting}
           />
         </fieldset>
 
@@ -40,7 +61,9 @@
             id="text-start"
             name="start_time"
             placeholder="HH:MM:SS"
+            value={vid.startAt}
             required
+            disabled={isSubmitting}
           />
         </fieldset>
 
@@ -52,7 +75,9 @@
             id="text-end"
             name="end_time"
             placeholder="HH:MM:SS"
+            value={vid.endAt}
             required
+            disabled={isSubmitting}
           />
         </fieldset>
         <fieldset class="fieldset w-full">
@@ -63,6 +88,7 @@
             id="text-speaker"
             name="speaker"
             value={vid.speaker}
+            disabled={isSubmitting}
           />
         </fieldset>
         <fieldset class="fieldset w-full">
@@ -73,18 +99,27 @@
             id="text-series"
             name="series"
             value={vid.playlist}
+            disabled={isSubmitting}
           />
         </fieldset>
         <fieldset class="fieldset col-span-2">
           <legend class="fieldset-legend sm:text-sm">Description</legend>
-          <textarea class="textarea h-24 w-full" placeholder="Bio"></textarea>
+          <textarea
+            class="textarea h-24 w-full"
+            placeholder="Bio"
+            disabled={isSubmitting}
+          ></textarea>
           <div class="fieldset-label">
             Leave blank for an AI generated description
           </div>
         </fieldset>
       </div>
 
-      <button type="submit" class="btn btn-accent btn-block mt-6">Submit</button
+      <button
+        type="submit"
+        class="btn btn-accent btn-block mt-6"
+        disabled={isSubmitting}
+        >{isSubmitting ? "Submitting..." : "Submit"}</button
       >
     </div>
   </form>

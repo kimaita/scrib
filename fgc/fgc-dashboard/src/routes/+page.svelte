@@ -1,8 +1,68 @@
 <script>
   import { goto } from "$app/navigation";
+  import { onMount, onDestroy } from "svelte";
+  import {
+    videos,
+    setInitialVideos,
+    updateVideoInStore,
+  } from "$lib/stores/videoStore.js";
 
   let { data } = $props();
-  let videos = data.sermons;
+  let intervalId = null;
+  const POLLING_INTERVAL_MS = 30000;
+
+  onMount(() => {
+    setInitialVideos(data.sermons || []);
+
+    videos.subscribe((v) => $inspect(v));
+
+    intervalId = setInterval(pollVideoStatuses, POLLING_INTERVAL_MS);
+
+    pollVideoStatuses();
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  });
+
+  async function pollVideoStatuses() {
+    const processingVideos = $videos.filter(
+      (v) => v.state.toLocaleLowerCase() === "ongoing"
+    );
+    if (processingVideos.length === 0) {
+      console.log("No videos processing, skipping poll.");
+      return;
+    }
+
+    const processingIds = processingVideos.map((v) => v.id);
+    console.log("Polling for status updates on IDs:", processingIds);
+
+    try {
+      // TODO Call our new API endpoint (create this next)
+      const response = await fetch(
+        `/api/video-status?ids=${processingIds.join(",")}`
+      );
+      if (!response.ok) {
+        console.error("Failed to fetch video statuses:", response.statusText);
+        return;
+      }
+
+      const updatedStatuses = await response.json();
+      console.log(updatedStatuses);
+
+      updatedStatuses.forEach((update) => {
+        const currentVideo = $videos.find((v) => v.id === update.id);
+        if (currentVideo && currentVideo.status !== update.status) {
+          console.log(`Updating status for ${update.id} to ${update.status}`);
+          updateVideoInStore(update.id, { status: update.status });
+        }
+      });
+    } catch (error) {
+      console.error("Error polling video statuses:", error);
+    }
+  }
 </script>
 
 <section class="container mx-auto px-4 py-8">
@@ -37,13 +97,13 @@
       <thead>
         <tr>
           <th>Title</th>
-          <th>Date</th>
           <th>Speaker</th>
+          <th>Date</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        {#each videos as vid (vid.id)}
+        {#each $videos as vid (vid.id)}
           <tr onclick={() => goto(`/episode/${vid.id}`)}>
             <td>
               <!-- <div class="flex items-center gap-3">
@@ -56,24 +116,22 @@
                   </div>
                 </div>
                 <div>-->
-              <div class="font-bold">{vid.title}</div>
+              <div class="font-semibold md:font-bold">{vid.title}</div>
               <!-- </div>
               </div> -->
             </td>
-            <td>
-              {vid.publishDate}
-            </td>
             <td>{vid.speaker}</td>
+            <td>{vid.publishDate}</td>
             <td>
               <span
                 class={[
                   "badge",
-                  "badge-sm",
+                  "badge-xs",
+                  "md:badge-sm",
                   vid.state.toLocaleLowerCase() === "ready" && "badge-success",
                   vid.state.toLocaleLowerCase() === "unstarted" &&
                     "badge-neutral",
-                  vid.state.toLocaleLowerCase() === "processing" &&
-                    "badge-info",
+                  vid.state.toLocaleLowerCase() === "ongoing" && "badge-info",
                   vid.state.toLocaleLowerCase() === "failed" && "badge-error",
                 ]}
               >
