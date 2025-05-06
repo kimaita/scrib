@@ -13,11 +13,7 @@
 
   onMount(() => {
     setInitialVideos(data.sermons || []);
-
-    videos.subscribe((v) => $inspect(v));
-
     intervalId = setInterval(pollVideoStatuses, POLLING_INTERVAL_MS);
-
     pollVideoStatuses();
 
     return () => {
