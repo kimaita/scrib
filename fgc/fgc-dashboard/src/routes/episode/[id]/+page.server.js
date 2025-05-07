@@ -23,9 +23,9 @@ async function updateRecord(data, state) {
   if (resp.ok) {
     console.log("Record updated successfully");
   } else {
-    console.error("Failed to update:", await resp.text());
+    console.error("Failed to update DB record");
   }
-  return { success: resp.ok, body: await resp.text() };
+  return { success: resp.ok, body: await resp.json() };
 }
 
 async function submitForProcessing(data) {
@@ -52,7 +52,7 @@ async function submitForProcessing(data) {
     console.log("Processing failed");
   }
 
-  return { success: processing.ok, body: await processing.text() };
+  return { success: processing.ok, body: await processing.json() };
 }
 
 export const actions = {
@@ -60,16 +60,17 @@ export const actions = {
     const data = await request.formData();
     const videoId = data.get("video_id");
     try {
-      const submitSuccess = await submitForProcessing(data);
+      //   const submitSuccess = await submitForProcessing(data);
       const updateSuccess = await updateRecord(
-        data,
-        submitSuccess.success ? "ONGOING" : undefined
+        data
+        // submitSuccess.success ? "ONGOING" : undefined
       );
 
-      if (!(submitSuccess.success && updateSuccess.success)) {
+      //   if (!(submitSuccess.success && updateSuccess.success)) {
+      if (!updateSuccess.success) {
         return fail(500, {
           error: "An error occured submitting your request.",
-          detail: submitSuccess.body || updateSuccess.body,
+          detail: updateSuccess.body,
         });
       }
       try {
