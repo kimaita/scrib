@@ -258,11 +258,12 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         return False
 
     audio_path = Path("/downloads/unprocessed")
-
-    logging.info(f"Downloaded audio {video_id}: {downloaded}")
+    filepath = os.path.join(audio_path, Path(downloaded).name)
+    logging.info(f"Downloaded audio {video_id}: {filepath}")
+    logging.info(f"File available at: {os.path.isfile(filepath)}")
 
     ffmpeg_cmd = create_ffmpeg_cmd(
-        input=os.path.join(audio_path, Path(downloaded).name),
+        input=filepath,
         output=filename,
         **ffmpeg_args,
     )
