@@ -22,10 +22,10 @@ async function updateRecord(data, state) {
   });
   if (resp.ok) {
     console.log("Record updated successfully");
-    return true;
+  } else {
+    console.error("Failed to update:", await resp.text());
   }
-  console.error("Failed to update:", await resp.text());
-  return false;
+  return { success: resp.ok, body: await resp.text() };
 }
 
 async function submitForProcessing(data) {
@@ -48,11 +48,11 @@ async function submitForProcessing(data) {
   });
   if (processing.ok) {
     console.log("Processing started successfully");
-    const message = await processing.json();
-    return message;
+  } else {
+    console.log("Processing failed");
   }
-  console.log("Processing failed");
-  return false;
+
+  return { success: processing.ok, body: await processing.text() };
 }
 
 export const actions = {
@@ -63,12 +63,13 @@ export const actions = {
       const submitSuccess = await submitForProcessing(data);
       const updateSuccess = await updateRecord(
         data,
-        submitSuccess ? "ONGOING" : undefined
+        submitSuccess.success ? "ONGOING" : undefined
       );
 
-      if (!(submitSuccess && updateSuccess)) {
+      if (!(submitSuccess.success && updateSuccess.success)) {
         return fail(500, {
           error: "An error occured submitting your request.",
+          detail: submitSuccess.body || updateSuccess.body,
         });
       }
       try {
