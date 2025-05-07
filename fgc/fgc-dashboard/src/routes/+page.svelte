@@ -88,7 +88,7 @@
   </label>
 
   <div class="overflow-x-auto">
-    <table class="table table-xs">
+    <table class="table table-xs md:table-md">
       <!-- head -->
       <thead>
         <tr>
@@ -137,16 +137,6 @@
           </tr>
         {/each}
       </tbody>
-      <!-- foot -->
-      <!-- <tfoot>
-        <tr>
-          <th></th>
-          <th>Name</th>
-          <th>Job</th>
-          <th>Favorite Color</th>
-          <th></th>
-        </tr>
-      </tfoot> -->
     </table>
   </div>
 </section>
