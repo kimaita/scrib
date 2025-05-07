@@ -22,7 +22,7 @@ def api_checkk():
 async def create_ep(video: Video, background_tasks: BackgroundTasks):
     """"""
 
-    background_tasks.add_task(prepare_episode, video.video_id, video.start, video.end)
+    background_tasks.add_task(prepare_episode, video)
     # if not res:
     #     raise HTTPException(status_code=500, detail="Something went wrong")
     return {"message": "Video received for processing"}
