@@ -222,6 +222,7 @@ def download_audio(video_id: str) -> str | None:
     if resp.status_code != 200:
         logging.error(f"Error downloading {video_id}: {resp_json}")
         return None
+
     file_path = resp_json.get("path")
     logging.info(f"File downloaded at {file_path}")
     return file_path
@@ -256,9 +257,15 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     if not downloaded:
         return False
 
+    audio_path = Path("/downloads/unprocessed")
+
     logging.info(f"Downloaded audio {video_id}: {downloaded}")
 
-    ffmpeg_cmd = create_ffmpeg_cmd(input=downloaded, output=filename, **ffmpeg_args)
+    ffmpeg_cmd = create_ffmpeg_cmd(
+        input=os.path.join(audio_path, Path(downloaded).name),
+        output=filename,
+        **ffmpeg_args,
+    )
     logging.info(f"Processing audio {filename}: {ffmpeg_cmd} ")
     audio_process = subprocess.Popen(
         ffmpeg_cmd,
