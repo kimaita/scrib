@@ -1,10 +1,10 @@
 from .prepare_podcast_ep import prepare_episode
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel
 
 
 class Video(BaseModel):
-    video_id: str
+    id: str
     start: str | None = None
     end: str | None = None
     metadata: dict | None = None
