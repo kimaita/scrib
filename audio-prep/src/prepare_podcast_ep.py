@@ -4,6 +4,8 @@ import shlex
 import subprocess
 from datetime import timedelta
 from io import BytesIO
+from pathlib import Path
+
 import boto3
 import requests
 from botocore.exceptions import ClientError
@@ -12,23 +14,65 @@ from google import genai
 from PIL import Image, ImageOps
 
 from .youtube_api import YouTube
-from .download import download_audio
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    filename="scrib-run.log",
     format="%(levelname)s:%(asctime)s:%(message)s",
     encoding="utf-8",
     level=logging.INFO,
 )
 
 
+def upload_file(file_name, object_name=None):
+    """Upload a file to R2 Storage
+
+    :param file_name: File to upload
+    :param object_name: Storage object name. If not specified then file_name is used
+    :return: True if file was uploaded, else False
+    """
+    if object_name is None:
+        object_name = os.path.basename(file_name)
+
+    print("Uploading to R2:", file_name)
+    s3 = boto3.client(
+        service_name="s3",
+        endpoint_url=f"https://{os.getenv('ACCOUNT_ID')}.r2.cloudflarestorage.com",
+        aws_access_key_id=os.getenv("ACCESS_KEY"),
+        aws_secret_access_key=os.getenv("SECRET_ACCESS_KEY"),
+        region_name=os.getenv("REGION"),
+    )
+
+    try:
+        s3.upload_file(
+            file_name,
+            os.getenv("BUCKET_NAME"),
+            object_name,
+        )
+    except ClientError as e:
+        logging.error(e)
+        return False
+    return True
+
+
+def update_video(video_id, **kwargs):
+    """Update video attributes"""
+    API_ENDPOINT = f"{os.getenv('SCRIB_API_URL')}/videos"
+
+    r = requests.patch(f"{API_ENDPOINT}/{video_id}", json=kwargs)
+    resp = r.json()
+    if r.status_code != 200:
+        logging.error(f"Error updating video {video_id}: {resp}")
+        return False
+
+    return resp
+
+
 def generate_summary(file_path) -> str:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     audio_file = client.files.upload(file=file_path)
-    with open(os.path.expanduser("~/server/src/sermon_summary_prompt.txt")) as f:
+    with open("sermon_summary_prompt.txt") as f:
         PROMPT = f.read()
     logging.info(f"Generating summary: {file_path}")
 
@@ -166,6 +210,23 @@ def create_ffmpeg_cmd(input=None, output=None, **kwargs):
     return ffmpeg_cmd
 
 
+def download_audio(video_id: str) -> str | None:
+    """"""
+    resp = requests.post(
+        f"{os.getenv('DOWNLOADER_API')}/download",
+        json={"id": video_id},
+    )
+
+    resp_json = resp.json()
+
+    if resp.status_code != 200:
+        logging.error(f"Error downloading {video_id}: {resp_json}")
+        return None
+    file_path = resp_json.get("path")
+    logging.info(f"File downloaded at {file_path}")
+    return file_path
+
+
 def prepare_audio(video_id, start, end, metadata) -> str:
     """Process a sermon audio recording"""
 
@@ -173,6 +234,9 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     thumbnail = f"{video_id}.podcast.jpg"
 
     info = get_video_info(video_id)
+    if "description" in metadata:
+        del metadata["description"]
+
     metadata.update(
         {
             "publisher": info.get("channel"),
@@ -189,13 +253,7 @@ def prepare_audio(video_id, start, end, metadata) -> str:
 
     logging.info(f"Downloading audio {video_id}")
     downloaded = download_audio(video_id)
-    # download_req  = requests.post(os.getenv('PROCESSING_URL'), json={"video_id": video_id})
-    # if download_req.status_code != 200:
-    #     logging.error(f"Error downloading {video_id}: {download_req.json()}")
-    #     return False
-    # downloaded = download_req.json().get('path')
     if not downloaded:
-        logging.error(f"Error downloading {video_id}")
         return False
 
     logging.info(f"Downloaded audio {video_id}: {downloaded}")
@@ -230,8 +288,8 @@ def prepare_episode(video):
 
     if not artwork:
         logging.error("Error processing artwork")
-        return
-    upload_file(artwork, f"processed/{video.id}/{artwork}")
+    else:
+        upload_file(artwork, f"processed/{video.id}/{artwork}")
 
     audio = prepare_audio(video.id, video.start, video.end, video.metadata or {})
     if not audio:
@@ -247,7 +305,9 @@ def prepare_episode(video):
         update_video(video.id, state="FAILED")
         return
 
-    summary = generate_summary(audio)
+    summary = video.metadata.get("description") or generate_summary(audio)
+
+    upload_file(artwork, f"processed/{video.id}/{artwork}")
     upload_file(audio, f"processed/{video.id}/{audio}")
 
     update_req = update_video(
@@ -256,51 +316,8 @@ def prepare_episode(video):
         state="READY",
         description=summary,
     )
-
     logging.info(f"Episode prepared: {video.id} - {update_req}")
 
+    Path(artwork).unlink(missing_ok=True)
+    Path(audio).unlink(missing_ok=True)
     return True
-
-
-def upload_file(file_name, object_name=None):
-    """Upload a file to R2 Storage
-
-    :param file_name: File to upload
-    :param object_name: Storage object name. If not specified then file_name is used
-    :return: True if file was uploaded, else False
-    """
-    if object_name is None:
-        object_name = os.path.basename(file_name)
-
-    print("Uploading to R2:", file_name)
-    s3 = boto3.client(
-        service_name="s3",
-        endpoint_url=f"https://{os.getenv('ACCOUNT_ID')}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_ACCESS_KEY"),
-        region_name=os.getenv("REGION"),
-    )
-
-    try:
-        s3.upload_file(
-            file_name,
-            os.getenv("BUCKET_NAME"),
-            object_name,
-        )
-    except ClientError as e:
-        logging.error(e)
-        return False
-    return True
-
-
-def update_video(video_id, **kwargs):
-    """Update video attributes"""
-    API_ENDPOINT = "https://scrib-api.childrick.workers.dev/videos"
-
-    r = requests.patch(f"{API_ENDPOINT}/{video_id}", json=kwargs)
-    resp = r.json()
-    if r.status_code != 200:
-        logging.error(f"Error updating video {video_id}: {resp}")
-        return False
-
-    return resp
