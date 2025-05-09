@@ -76,7 +76,7 @@ export const actions = {
       if (!(submitSuccess.success && updateSuccess.success)) {
         return fail(500, {
           error: "An error occured submitting your request.",
-          detail: updateSuccess.body,
+          detail: updateSuccess.body || submitSuccess.body,
         });
       }
       try {
@@ -91,7 +91,7 @@ export const actions = {
       console.error(`Error in form action for video ${videoId}:`, err);
       return fail(500, {
         message: "An unexpected error occurred.",
-        error: err,
+        detail: err,
       });
     }
     redirect(303, "/");
