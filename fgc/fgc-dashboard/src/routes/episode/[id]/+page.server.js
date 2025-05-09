@@ -21,11 +21,7 @@ async function updateRecord(data, state) {
       "Content-Type": "application/json",
     },
   });
-  if (resp.ok) {
-    console.log("Record updated successfully");
-  } else {
-    console.error("Failed to update DB record");
-  }
+
   return { success: resp.ok, body: await resp.json() };
 }
 
@@ -53,11 +49,6 @@ async function submitForProcessing(data) {
       Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
   });
-  if (processing.ok) {
-    console.log("Processing started successfully");
-  } else {
-    console.log("Processing failed");
-  }
 
   return { success: processing.ok, body: await processing.json() };
 }
@@ -67,16 +58,16 @@ export const actions = {
     const data = await request.formData();
     const videoId = data.get("video_id");
     try {
-      const submitSuccess = await submitForProcessing(data);
-      const updateSuccess = await updateRecord(
+      const submit = await submitForProcessing(data);
+      const update = await updateRecord(
         data,
-        submitSuccess.success ? "ONGOING" : undefined
+        submit.success ? "ONGOING" : undefined
       );
 
-      if (!(submitSuccess.success && updateSuccess.success)) {
+      if (!(submit.success && update.success)) {
         return fail(500, {
           error: "An error occured submitting your request.",
-          detail: updateSuccess.body || submitSuccess.body,
+          detail: update.success ? submit.body : update.body,
         });
       }
       try {
