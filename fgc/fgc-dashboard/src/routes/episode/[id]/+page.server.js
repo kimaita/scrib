@@ -89,7 +89,10 @@ export const actions = {
       }
     } catch (err) {
       console.error(`Error in form action for video ${videoId}:`, err);
-      return fail(500, { message: "An unexpected error occurred." });
+      return fail(500, {
+        message: "An unexpected error occurred.",
+        error: err,
+      });
     }
     redirect(303, "/");
   },
