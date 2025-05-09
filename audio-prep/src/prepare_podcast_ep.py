@@ -72,7 +72,7 @@ def update_video(video_id, **kwargs):
 def generate_summary(file_path) -> str:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     audio_file = client.files.upload(file=file_path)
-    with open("sermon_summary_prompt.txt") as f:
+    with open("/app/sermon_summary_prompt.txt") as f:
         PROMPT = f.read()
     logging.info(f"Generating summary: {file_path}")
 
