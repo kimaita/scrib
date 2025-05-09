@@ -298,8 +298,6 @@ def prepare_episode(video):
         logging.error("Error processing artwork")
     else:
         artwork_upload = upload_file(artwork, f"processed/{video.id}/{artwork}")
-        if artwork_upload:
-            Path(artwork).unlink(missing_ok=True)
 
     audio = prepare_audio(video.id, video.start, video.end, video.metadata or {})
     if not audio:
@@ -320,6 +318,7 @@ def prepare_episode(video):
     episode_upload = upload_file(audio, f"processed/{video.id}/{audio}")
     if episode_upload:
         Path(audio).unlink(missing_ok=True)
+        Path(artwork).unlink(missing_ok=True)
 
     if not episode_upload and artwork_upload:
         update_video(video.id, state="FAILED")
