@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "$env/static/private";
 import { PROCESSING_API_URL } from "$env/static/private";
+import { ACCESS_TOKEN } from "$env/static/private";
 import { fail, redirect } from "@sveltejs/kit";
 import { updateVideoInStore } from "$lib/stores/videoStore.js";
 
@@ -28,8 +29,13 @@ async function updateRecord(data, state) {
   return { success: resp.ok, body: await resp.json() };
 }
 
+/**
+ *
+ * @param {*} data
+ * @returns
+ */
 async function submitForProcessing(data) {
-  const processing = await fetch(`${PROCESSING_API_URL}/episode`, {
+  const processing = await fetch(`${PROCESSING_API_URL}`, {
     method: "POST",
     body: JSON.stringify({
       id: data.get("video_id"),
@@ -44,6 +50,7 @@ async function submitForProcessing(data) {
     }),
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
   });
   if (processing.ok) {
@@ -60,14 +67,13 @@ export const actions = {
     const data = await request.formData();
     const videoId = data.get("video_id");
     try {
-      //   const submitSuccess = await submitForProcessing(data);
+      const submitSuccess = await submitForProcessing(data);
       const updateSuccess = await updateRecord(
-        data
-        // submitSuccess.success ? "ONGOING" : undefined
+        data,
+        submitSuccess.success ? "ONGOING" : undefined
       );
 
-      //   if (!(submitSuccess.success && updateSuccess.success)) {
-      if (!updateSuccess.success) {
+      if (!(submitSuccess.success && updateSuccess.success)) {
         return fail(500, {
           error: "An error occured submitting your request.",
           detail: updateSuccess.body,
