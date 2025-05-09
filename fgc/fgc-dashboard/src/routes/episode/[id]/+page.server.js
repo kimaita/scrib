@@ -51,11 +51,10 @@ async function submitForProcessing(data) {
   });
 
   const resp = await processing.json();
-  const headers = processing.headers.entries().toArray().join(", ");
 
   return {
     success: processing.ok,
-    body: `${resp} HEADERS: ${headers}`,
+    body: `${resp}`,
   };
 }
 
