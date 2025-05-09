@@ -328,4 +328,4 @@ def prepare_episode(video):
 
     Path(artwork).unlink(missing_ok=True)
     Path(audio).unlink(missing_ok=True)
-    return True
+    return update_req

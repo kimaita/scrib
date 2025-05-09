@@ -1,6 +1,7 @@
-from .prepare_podcast_ep import prepare_episode
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+from .prepare_podcast_ep import prepare_episode
 
 
 class Video(BaseModel):
@@ -19,10 +20,11 @@ def api_checkk():
 
 
 @app.post("/episodes")
-async def create_ep(video: Video, background_tasks: BackgroundTasks):
+async def create_ep(video: Video):
     """"""
 
-    background_tasks.add_task(prepare_episode, video)
-    # if not res:
-    #     raise HTTPException(status_code=500, detail="Something went wrong")
-    return {"message": "Video received for processing"}
+    episode = prepare_episode(video)
+    if not episode:
+        raise HTTPException(status_code=500, detail="Something went wrong")
+
+    return {"message": "Episode prepared", "details": episode}
