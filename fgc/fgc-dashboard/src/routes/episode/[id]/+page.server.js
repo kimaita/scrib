@@ -50,7 +50,10 @@ async function submitForProcessing(data) {
     },
   });
 
-  return { success: processing.ok, body: await processing.json() };
+  return {
+    success: processing.ok,
+    body: `${await processing.json()} HEADERS: ${processing.headers}`,
+  };
 }
 
 export const actions = {
@@ -67,7 +70,9 @@ export const actions = {
       if (!(submit.success && update.success)) {
         return fail(500, {
           error: "An error occured submitting your request.",
-          detail: update.success ? submit.body : update.body,
+          detail: update.success
+            ? `TOKEN: ${ACCESS_TOKEN} ${submit.body}`
+            : update.body,
         });
       }
       try {
