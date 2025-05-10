@@ -11,6 +11,6 @@
 	 */
     "vars": {
         "API_BASE_URL": "https://scrib-api.childrick.workers.dev",
-        "PROCESSING_API_URL": "https://cloudtasks.googleapis.com/v2/projects/pristine-cairn-450503-r1/locations/europe-west1/queues/scrib-processing-queue/tasks:buffer"
+        "PROCESSING_API_URL": "https://scrib-193836056921.europe-west1.run.app/enqueue",
     }
 }

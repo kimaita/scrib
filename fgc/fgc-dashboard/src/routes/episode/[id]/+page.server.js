@@ -1,6 +1,5 @@
 import { API_BASE_URL } from "$env/static/private";
 import { PROCESSING_API_URL } from "$env/static/private";
-import { ACCESS_TOKEN } from "$env/static/private";
 import { fail, redirect } from "@sveltejs/kit";
 import { updateVideoInStore } from "$lib/stores/videoStore.js";
 
@@ -46,7 +45,6 @@ async function submitForProcessing(data) {
     }),
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
   });
 
@@ -54,7 +52,7 @@ async function submitForProcessing(data) {
 
   return {
     success: processing.ok,
-    body: `${resp}`,
+    body: resp,
   };
 }
 
