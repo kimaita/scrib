@@ -1,7 +1,11 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .prepare_podcast_ep import prepare_episode
+from .queue import create_http_task
+
+load_dotenv()
 
 
 class Video(BaseModel):
@@ -15,8 +19,18 @@ app = FastAPI()
 
 
 @app.get("/")
-def api_checkk():
+def api_check():
     return {"Status": "OK"}
+
+
+@app.post("/enqueue")
+def add_to_queue(video: Video):
+    """"""
+    task = create_http_task(json_payload=video.model_dump())
+    if task != 200:
+        raise HTTPException(status_code=500, detail="Something went wrong")
+
+    return {"message": "Task added to queue", "details": task}
 
 
 @app.post("/episodes")

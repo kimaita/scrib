@@ -8,6 +8,7 @@ dependencies = [
     "boto3>=1.37.12",
     "fastapi[all]>=0.115.12",
     "ffmpeg-python>=0.2.0",
+    "google-cloud-tasks>=2.19.2",
     "google-genai>=1.13.0",
     "pillow>=11.1.0",
     "pydantic>=2.10.6",
