@@ -11,6 +11,6 @@
 	 */
     "vars": {
         "API_BASE_URL": "https://scrib-api.childrick.workers.dev",
-        "PROCESSING_API_URL": "https://scrib-193836056921.europe-west1.run.app/enqueue",
+        "PROCESSING_API_URL": "https://scrib-193836056921.europe-west1.run.app/enqueue"
     }
 }
