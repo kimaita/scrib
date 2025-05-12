@@ -27,7 +27,7 @@ def api_check():
 def add_to_queue(video: Video):
     """"""
     task = create_http_task(json_payload=video.model_dump())
-    if task != 200:
+    if not task.name:
         raise HTTPException(status_code=500, detail="Something went wrong")
 
     return {"message": "Task added to queue", "details": task}
