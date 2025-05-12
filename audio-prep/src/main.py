@@ -30,7 +30,7 @@ def add_to_queue(video: Video):
     if not task.name:
         raise HTTPException(status_code=500, detail="Something went wrong")
 
-    return {"message": "Task added to queue", "details": task}
+    return {"message": "Task added to queue", "details": task.name}
 
 
 @app.post("/episodes")
