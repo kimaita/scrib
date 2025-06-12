@@ -174,7 +174,7 @@ def check_length(file_name, expected):
 
 
 def create_ffmpeg_cmd(input=None, output=None, **kwargs):
-    ffmpeg_cmd = ["ffmpeg", "-hide_banner", "-loglevel", "10"]
+    ffmpeg_cmd = ["ffmpeg", "-hide_banner", "-loglevel", "1"]
     BITRATE = "128k"
 
     if "start" in kwargs:
@@ -188,7 +188,8 @@ def create_ffmpeg_cmd(input=None, output=None, **kwargs):
 
     if "metadata" in kwargs:
         for k, v in kwargs["metadata"].items():
-            ffmpeg_cmd.extend(("-metadata", f"{k}={v}"))
+            if v:
+                ffmpeg_cmd.extend(("-metadata", f"{k}={v}"))
 
     ffmpeg_cmd.extend(
         [
@@ -223,9 +224,7 @@ def download_audio(video_id: str) -> str | None:
         logging.error(f"Error downloading {video_id}: {resp_json}")
         return None
 
-    file_path = resp_json.get("path")
-    logging.info(f"File downloaded at {file_path}")
-    return file_path
+    return resp_json.get("path")
 
 
 def prepare_audio(video_id, start, end, metadata) -> str:
@@ -280,6 +279,7 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     ff_logs, ff_error = audio_process.communicate()
 
     logging.info(f"Processing logs: {ff_logs}")
+    logging.info(f"Return code: {audio_process.returncode}")
 
     if audio_process.returncode:
         logging.error(f"Processing failed: {ff_error}")
