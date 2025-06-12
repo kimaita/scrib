@@ -275,13 +275,13 @@ def prepare_audio(video_id, start, end, metadata) -> str:
         ffmpeg_cmd,
         stderr=subprocess.PIPE,
     )
-    _, processing_err = audio_process.communicate()
+    # _, processing_err = audio_process.communicate()
+    audio_process.wait()
 
     if audio_process.returncode:
-        logging.error(f"Error processing: {processing_err.decode()}")
         return False
 
-    logging.info(f"Audio {filename} processed: {audiofile}")
+    logging.info(f"Audio {filename} processed: {audiofile} ")
     return audiofile
 
 
