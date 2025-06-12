@@ -273,12 +273,16 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     logging.info(f"Processing audio {filename}: {ffmpeg_cmd} ")
     audio_process = subprocess.Popen(
         ffmpeg_cmd,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        text=True,
     )
-    # _, processing_err = audio_process.communicate()
-    audio_process.wait()
+    ff_logs, ff_error = audio_process.communicate()
+
+    logging.info(f"Processing logs: {ff_logs}")
 
     if audio_process.returncode:
+        logging.error(f"Processing failed: {ff_error}")
         return False
 
     logging.info(f"Audio {filename} processed: {audiofile} ")
