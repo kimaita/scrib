@@ -257,14 +257,17 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     if not downloaded:
         return False
 
-    audio_path = Path("/downloads/unprocessed")
-    filepath = os.path.join(audio_path, Path(downloaded).name)
-    logging.info(f"Downloaded audio {video_id}: {filepath}")
-    logging.info(f"File available at: {os.path.isfile(filepath)}")
+    download_path = Path("/downloads/unprocessed")
+    processed_path = Path("/downloads/processed")
 
+    filepath = os.path.join(download_path, Path(downloaded).name)
+    if os.path.isfile(filepath):
+        logging.info(f"Downloaded audio {video_id}: {filepath}")
+
+    audiofile = os.path.join(processed_path, filename)
     ffmpeg_cmd = create_ffmpeg_cmd(
         input=filepath,
-        output=filename,
+        output=audiofile,
         **ffmpeg_args,
     )
     logging.info(f"Processing audio {filename}: {ffmpeg_cmd} ")
@@ -274,14 +277,12 @@ def prepare_audio(video_id, start, end, metadata) -> str:
     )
     _, processing_err = audio_process.communicate()
 
-    audio_process.wait()
-
     if audio_process.returncode:
         logging.error(f"Error processing: {processing_err.decode()}")
         return False
 
-    logging.info(f"Audio processed {filename}")
-    return filename
+    logging.info(f"Audio {filename} processed: {audiofile}")
+    return audiofile
 
 
 def prepare_episode(video):
