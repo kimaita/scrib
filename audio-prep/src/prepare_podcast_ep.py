@@ -69,6 +69,17 @@ def update_video(video_id, **kwargs):
     return resp
 
 
+def update_rss():
+    """Update RSS feed for podcast"""
+
+    r = requests.post(os.getenv("RSS_API_URL"))
+    if r.status_code != 201:
+        logging.error(f"Error updating RSS feed: {r.json()}")
+        return False
+
+    return True
+
+
 def generate_summary(file_path) -> str:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     audio_file = client.files.upload(file=file_path)
@@ -329,12 +340,17 @@ def prepare_episode(video):
         update_video(video.id, state="UNSTARTED")
         return
 
-    update_req = update_video(
+    updated_vid = update_video(
         video.id,
         duration=int(audio_length),
         state="READY",
         description=summary,
     )
-    logging.info(f"Episode prepared: {video.id} - {update_req}")
 
-    return update_req
+    if updated_vid:
+        rss_updated = update_rss()
+        logging.info(
+            f"Episode prepared: {video.id} - {updated_vid}\nRSS Updated: {rss_updated}"
+        )
+
+    return updated_vid
