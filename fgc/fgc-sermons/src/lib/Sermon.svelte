@@ -18,7 +18,7 @@
       <h5
         class="text-md leading-none sm:text-lg font-semibold text-base-content/95 capitalize"
       >
-        {sermon.title.toLowerCase()}
+        {sermon.title}
       </h5>
       <p class="text-base-content/60 truncate text-xs sm:text-sm">
         {#if sermon.speaker}

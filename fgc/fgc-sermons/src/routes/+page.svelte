@@ -15,7 +15,7 @@
 <section>
   <h2 class="my-6 text-2xl">Recent Sermons</h2>
   <ul class="grid grid-cols-1 gap-8 md:gap-12 px-2 sm:grid-cols-2 md:px-4 mt-2">
-    {#each recentSermons as sermon}
+    {#each recentSermons.slice(0, 6) as sermon}
       <Sermon {sermon} />
     {/each}
   </ul>
